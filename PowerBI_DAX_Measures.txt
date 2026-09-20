@@ -1,0 +1,113 @@
+=============================================================================
+POWER BI — DATA MODEL & DAX MEASURES
+Retail Sales & Business Performance Analytics
+=============================================================================
+
+TABLES
+------
+- Retail_Sales_Raw_Data.csv -> Orders (fact table)
+- Customers.csv             -> Customers (dimension table)
+
+RELATIONSHIP
+------------
+Customers[Customer_ID] (1) --> (*) Orders[Customer_ID]
+Cross filter direction: Single
+
+DATE TABLE
+----------
+DateTable = CALENDAR(MIN(Orders[Order_Date]), MAX(Orders[Order_Date]))
+
+Columns added on DateTable:
+  Year = YEAR(DateTable[Date])
+  MonthYear = FORMAT(DateTable[Date], "mmm-yyyy")
+  MonthYearSort = YEAR(DateTable[Date]) * 100 + MONTH(DateTable[Date])
+
+MonthYearSort exists purely so MonthYear can be sorted chronologically
+instead of alphabetically (Power BI can't sort a text column by a date
+column when there's more than one date per text value, so a numeric
+sort key is needed instead).
+
+Related DateTable[Date] (1) --> (*) Orders[Order_Date].
+
+-----------------------------------------------------------------------------
+CORE MEASURES
+-----------------------------------------------------------------------------
+
+Total Sales = SUM(Orders[Sales])
+
+Total Profit = SUM(Orders[Profit])
+
+Total Orders = COUNTROWS(Orders)
+
+Profit Margin % = DIVIDE([Total Profit], [Total Sales], 0)
+
+Unique Customers = DISTINCTCOUNT(Orders[Customer_ID])
+
+-----------------------------------------------------------------------------
+CUSTOMER SEGMENTATION
+-----------------------------------------------------------------------------
+
+Customer Order Count =
+CALCULATE(COUNTROWS(Orders), ALLEXCEPT(Orders, Orders[Customer_ID]))
+-- column: repeats each customer's total order count on every one of
+-- their rows, so it can be used to bucket them below
+
+Customer Type =
+IF(Orders[Customer Order Count] > 1, "Repeat", "One-Time")
+-- column, built off Customer Order Count above
+
+Repeat Customers Count =
+CALCULATE(DISTINCTCOUNT(Orders[Customer_ID]), Orders[Customer Type] = "Repeat")
+
+Repeat Customer % = DIVIDE([Repeat Customers Count], [Unique Customers], 0)
+
+-----------------------------------------------------------------------------
+DISCOUNT BANDING
+-----------------------------------------------------------------------------
+
+Discount Band =
+SWITCH(TRUE(),
+    Orders[Discount_Pct] = 0, "0%",
+    Orders[Discount_Pct] <= 10, "1-10%",
+    Orders[Discount_Pct] <= 20, "11-20%",
+    "21%+")
+
+-----------------------------------------------------------------------------
+DASHBOARD PAGES
+-----------------------------------------------------------------------------
+
+PAGE 1 — Executive Overview
+  Cards: Total Sales, Total Profit, Total Orders, Unique Customers
+  Line chart: Total Sales by Month (uses DateTable[MonthYear], sorted by
+    MonthYearSort)
+  Bar chart: Total Profit by Region
+  Donut chart: Sales by Category, with a small Card overlaid in the
+    center hole to show Total Sales (Power BI donuts don't show a center
+    total natively)
+  Slicers: Year, Region, Category
+
+PAGE 2 — Regional & Product Deep Dive
+  Map: Sales by City (needs Map/Filled Map enabled under File > Options >
+    Global > Security first — off by default)
+  Matrix: Region x Category, with Total Sales / Total Profit / Profit
+    Margin %
+  Bar chart: Top 10 Products by Profit (Top N filter on Product)
+  Table: Discount Band vs Profit Margin
+
+PAGE 3 — Customer Insights
+  Table: Top 10 Customers by Profit (Top N filter on Customer_Name)
+  Cards: Unique Customers, Repeat Customer %
+  Bar chart: Repeat vs One-Time customer revenue
+  Scatter chart: Order Count (X) vs Total Profit (Y) per customer, bubble
+    size = Total Sales, legend off (too many customers to list)
+
+-----------------------------------------------------------------------------
+BUILD ORDER
+-----------------------------------------------------------------------------
+1. Import both CSVs.
+2. Build the relationship (Customers to Orders).
+3. Build DateTable and its columns, relate it to Orders.
+4. Add the measures above one at a time, checking each on a Card visual
+   before moving to the next.
+5. Build Page 1, then Page 2, then Page 3.
+6. Save as Retail_Sales_Dashboard.pbix.
