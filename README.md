@@ -81,3 +81,16 @@ and customers.
 - No cost-of-goods breakdown beyond profit, so margin analysis is at the
   order level, not the SKU-cost level.
 - No marketing spend data, so I can't tie sales lift to campaigns.
+
+## Dashboard Screenshots
+### Executive Overview
+
+![Executive Overview](screenshotspage1-executive-overview.png)
+
+### Regional & Product Deep Dive
+
+![Regional & Product Deep Dive](screenshotspage2-regional-product.png)
+
+### Customer Insights
+
+![Customer Insights](screenshotspage3-customer-insights.png)
